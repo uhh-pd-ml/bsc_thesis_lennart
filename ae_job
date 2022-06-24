@@ -1,0 +1,40 @@
+#!/bin/sh
+#SBATCH --partition=cms-uhh             ## or allgpu / cms / cms-uhh / maxgpu
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --job-name auto_encoder           # give job unique name
+#SBATCH --output ./out/%j-std.out      # terminal output
+#SBATCH --error ./out/%j-std.err
+#S BATCH --mail-type END
+#S BATCH --mail-user lennart.kaemmle@desy.de
+#SBATCH --constraint=GPU
+
+# #SBATCH --nodelist=max-cmsg004         # you can select specific nodes, if necessary
+# #SBATCH --constraint="P100|V100"        # ask for specific types of GPUs
+ 
+# (GPU drivers, anaconda, .bashrc, etc) --> likely not necessary if you're installing your own cudatoolkit & cuDNN versions
+#source /etc/profile.d/modules.sh
+#module load maxwell
+#module load cuda
+#module load anaconda/3
+
+. ~/.bashrc
+export PATH="/home/kaemmlel/miniconda3/envs/torch/bin:$PATH"
+
+set -x
+
+# go to your folder with your python scripts
+cd ~/Projects/amazing_ai
+
+# run
+# time python -m auto_encoder -o "./out/$SLURM_JOBID" -e 300
+# --data @events_b_sr_images_42_center \
+# --data @events_b_sr_images_54_center \
+time python -m amazing_ai.auto_encoder \
+     -o "./out/${SLURM_JOBID}_npix={npix}_ts={train_size}_data={data}" \
+     -e 200 \
+     --data @events_b_sr_images_54_cutoff=1.0_center \
+     --npix 54 \
+     --batch_size 512 \
+     --learning_rate 1e-3
+# time python -m amazing_ai.auto_encoder -o "./out/$SLURM_JOBID" -e 300 --data @kristian_events_b_sr_images_33px_rotated+flipped
