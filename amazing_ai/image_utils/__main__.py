@@ -57,6 +57,24 @@ def parse_args() -> Namespace:
         help="Width (and height) of the image in delta eta/phi",
     )
     parser.add_argument(
+        "--blur",
+        default=False,
+        action="store_true",
+        help="Blur the images",
+    )
+    parser.add_argument(
+        "--sigma",
+        default=0.7,
+        type=float,
+        help="Standard deviation for blurring in pixels",
+    )
+    parser.add_argument(
+        "--blur_size",
+        default=7,
+        type=int,
+        help="Size of blur filter (has no effect on sigma)",
+    )
+    parser.add_argument(
         "-y",
         "--yes",
         default=False,
@@ -105,11 +123,15 @@ if args.rotate:
     flags.append("rotate")
 if args.flip:
     flags.append("flip")
+if args.blur:
+    flags.append("blur")
 fout_name = fout_name.format(
     npix=args.npix,
     cutoff=args.cutoff,
     flags="".join(map(lambda flag: f"_{flag}", flags)),
-    basename=Path(fin_name).stem
+    basename=Path(fin_name).stem,
+    sigma=args.sigma,
+    blur_size=args.blur_size
 )
 
 excludes = []
@@ -227,6 +249,9 @@ for i in range(RANK, iters, SIZE):
             center=args.center,
             flip=args.flip,
             norm=True,
+            sigma=args.sigma,
+            blur_size=args.blur_size,
+            blur=args.blur
         )
         jet2 = normalize_jet(jet2_PFCands[i_image])
         jet2 = cutoff_jet(jet2, cutoff_log=args.cutoff)
@@ -239,6 +264,9 @@ for i in range(RANK, iters, SIZE):
             center=args.center,
             flip=args.flip,
             norm=True,
+            sigma=args.sigma,
+            blur_size=args.blur_size,
+            blur=args.blur
         )
 
     fout["j1_images"][start_idx:end_idx] = j1_images
