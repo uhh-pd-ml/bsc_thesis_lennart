@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 import h5py
 import torch
 from torch.utils.data import Dataset
@@ -21,9 +21,10 @@ def get_datasets(
     train_size: Union[int, float] = 0.6,
     val_size: Union[int, float] = 0.1,
     jet: Literal[1, 2] = 1,
+    key: Optional[str] = None
 ) -> tuple[H5JetDataset, H5JetDataset, H5JetDataset]:
 
-    images = file[f"j{jet}_images"]
-    train_data, test_data, val_data = split_datasets(images, train_size, val_size)
+    data = file[key or f"j{jet}_images"]
+    train_data, test_data, val_data = split_datasets(data, train_size, val_size)
 
     return H5JetDataset(train_data), H5JetDataset(test_data), H5JetDataset(val_data)
