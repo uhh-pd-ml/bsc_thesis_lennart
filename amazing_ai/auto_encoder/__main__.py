@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, Namespace
-from .model import AE
+from .model import MODELS
 from .dataset import get_datasets
 from amazing_datasets import get_file
 from torch.utils.data import DataLoader
@@ -28,6 +28,9 @@ def parse_args() -> Namespace:
     parser.add_argument("-o", "--out_dir", type=str, default=f"out/{int(time.time())}")
     parser.add_argument("--train_size", type=int_or_float, default=0.6)
     parser.add_argument("--val_size", type=int_or_float, default=0.1)
+    parser.add_argument("--noise", type=float, default=0., help="Add noise to the AE input (i.e. 7e-3)")
+    parser.add_argument("--model", choices=MODELS.keys(), type=str, default="1")
+    parser.add_argument("--latent_space_size", type=int, default=40)
     args = parser.parse_args()
     args.out_dir = args.out_dir.format(
         data=args.data,
@@ -37,6 +40,9 @@ def parse_args() -> Namespace:
         batch_size=args.batch_size,
         train_size=args.train_size,
         val_size=args.val_size,
+        noise=args.noise,
+        model=args.model,
+        latent_space_size=args.latent_space_size
     )
     return args
 
@@ -49,7 +55,7 @@ os.makedirs(os.path.join(args.out_dir, "epochs"), exist_ok=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = AE(latent_space_size=40, npix=args.npix).to(device)
+model = MODELS[args.model](latent_space_size=args.latent_space_size, npix=args.npix).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
@@ -78,6 +84,8 @@ with open(f"{args.out_dir}/info.json", "w") as fout:
             "epochs": args.epochs,
             "batch_size": args.batch_size,
             "npix": args.npix,
+            "latent_space_size": args.latent_space_size,
+            "model": args.model
         },
         fout,
         sort_keys=True,
@@ -93,10 +101,12 @@ for epoch in range(args.epochs):
 
     for i_batch, batch in enumerate(train_loader):
         optimizer.zero_grad()
+
         batch = batch[:, None, :, :]
         batch = batch.to(device).float()
 
-        pred = model(batch)
+        ae_input = batch if not args.noise else batch + torch.randn_like(batch)*args.noise
+        pred = model(ae_input)
         loss = loss_function(batch, pred)
         loss.backward()
         train_loss += loss.item() / n_batches
