@@ -1,6 +1,6 @@
 # amazing_ai
 
-This repo contains random code for my Bachelor's thesis
+This repo contains random code for my Bachelor thesis
 
 ## MPI installation
 
