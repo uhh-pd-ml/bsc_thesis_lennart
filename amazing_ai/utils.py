@@ -40,18 +40,22 @@ def normalize_jet(jet: np.ndarray) -> np.ndarray:
     if jet.ndim != 2:
         jet = jet.reshape(-1, 3)
 
-    # jet[jet[:, PHI_I] < 0][:, PHI_I] += 2 * np.pi
-    # jet[jet[:, PHI_I] < -np.pi][:, PHI_I] += 2 * np.pi
-    # jet[jet[:, PHI_I] > np.pi][:, PHI_I] -= 2 * np.pi
-
     # Remove particles without momentum
     jet = jet[jet[:, 0] > 0]
 
-    if np.average(np.abs(jet[:, PHI_I]) > 2.5):
+    # jet[:, PHI_I] = (jet[:, PHI_I]) % np.pi - np.pi/2
+    if np.average(np.abs(jet[:, PHI_I])) > 2.5:
         # Jet likely wraps in phi... make all phi positive
         jet[jet[:, PHI_I] < 0, PHI_I] += 2 * np.pi
 
-    jet[:, PHI_I] = np.arcsin(np.sin(jet[:, PHI_I]))
+    # jet[:, PHI_I] = np.mod(jet[:, PHI_I] + np.pi, 2*np.pi) - np.pi
+    # jet[:, PHI_I] = (jet[:, PHI_I] + np.pi/2) % np.pi - np.pi/2
+    # jet[:, PHI_I] = (jet[:, PHI_I]) % np.pi - np.pi/2
+
+    # TODO: arcsin(sin(phi)) is probably pretty terrible
+    # jet[:, PHI_I] = np.arcsin(np.sin(jet[:, PHI_I]))
+    # Same as arcsin(sin(phi)) but 2x faster
+    jet[:, PHI_I] = np.pi/2-np.abs(np.mod(jet[:, PHI_I]+np.pi/2, 2*np.pi) - np.pi)
 
     return jet
 
@@ -59,7 +63,6 @@ def cutoff_jet(jet: np.ndarray, cutoff_log: float = 1.) -> np.ndarray:
     return jet[jet[:, PT_I] > np.exp(cutoff_log)]
 
 def rotate_jet(jet: np.ndarray) -> np.ndarray:
-    # TODO: Decide on whether to do this functional or with side-effects
     if jet.shape[0] < 2:
         return jet
 
@@ -86,7 +89,6 @@ def rotate_jet(jet: np.ndarray) -> np.ndarray:
     ])
 
 def center_jet(jet: np.ndarray) -> np.ndarray:
-    # TODO: Decide on whether to do this functional or with side-effects
     eta_avg = np.average(jet[:, ETA_I], weights=jet[:,PT_I])
     phi_avg = np.average(jet[:, PHI_I], weights=jet[:,PT_I])
     jet[:, ETA_I] -= eta_avg
@@ -94,7 +96,6 @@ def center_jet(jet: np.ndarray) -> np.ndarray:
     return jet
 
 def flip_jet(jet: np.ndarray) -> np.ndarray:
-    # TODO: Decide on whether to do this functional or with side-effects
     argmax_pt = np.argmax(jet[:, PT_I])
     ptmax_eta, ptmax_phi = jet[argmax_pt, ETA_I], jet[argmax_pt, PHI_I]
     if ptmax_eta < 0:
