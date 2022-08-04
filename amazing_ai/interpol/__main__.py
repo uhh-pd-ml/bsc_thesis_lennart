@@ -57,6 +57,8 @@ else:
     H5_DRIVER = None
 IS_MAIN = not RANK
 
+n_starts = args.n_starts if args.event_start is None else 1
+n_per_start = args.n_per_start if args.event_end is None else 1
 
 file_start_name = args.file_start
 file_end_name = args.file_end
@@ -68,8 +70,15 @@ file_out_name = args.o
 if file_out_name.startswith("@"):
     file_out_name = os.path.join(amazing_datasets.DATA_FOLDER, file_out_name[1:])
 
-n_starts = args.n_starts if args.event_start is None else 1
-n_per_start = args.n_per_start if args.event_end is None else 1
+flags = ""
+if args.blur:
+    flags += "_blur"
+file_out_name = file_out_name.format(
+    flags=flags,
+    steps=args.steps,
+    n_starts=n_starts,
+    n_per_start=n_per_start,
+)
 
 file_start = h5py.File(
     file_start_name, driver=H5_DRIVER, **(dict(comm=COMM) if USE_MPI else {})
