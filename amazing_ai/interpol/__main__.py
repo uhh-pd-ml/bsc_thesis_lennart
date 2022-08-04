@@ -33,6 +33,7 @@ def parse_args() -> Namespace:
     parser.add_argument("-n", "--n-starts", type=int, default=10, help="Number of starts")
     parser.add_argument("--n-per-start", type=int, default=10, help="Number of ends per start")
     parser.add_argument("-o", type=str, help="Output file (hdf5 format)")
+    parser.add_argument("--blur", default=False, action="store_true", help="Blur the images")
     parser.add_argument("--npix", type=int, default=54, help="Number of pixels")
     parser.add_argument(
         "--mpi", default=False, action="store_true", help="Activate MPI support"
@@ -104,12 +105,11 @@ end_events = file_end["jet1_PFCands"][end_indices.tolist()]
 npix = args.npix
 
 
-blur = True
+blur = args.blur
 rotate = False
 center = True
 flip = False
 norm = True
-blur = True
 sigma = 0.6
 blur_size = 9
 img_width = 1.2
