@@ -102,6 +102,8 @@ def pixelate(
 
     # the image is (img_width x img_width) in size
     pix_width = img_width / npix
+    mid_pix = npix // 2
+    
     jet_image = np.zeros((npix, npix), dtype=np.float16)
 
     # Prevent wrapping of phi. Moved to interpolation level
@@ -126,7 +128,6 @@ def pixelate(
     if center:
         jet = center_jet(jet)
 
-    mid_pix = npix // 2
     # transition to indices
     eta_indices = mid_pix + np.round(jet[:, ETA_I] / pix_width)
     phi_indices = mid_pix + np.round(jet[:, PHI_I] / pix_width)
@@ -137,8 +138,11 @@ def pixelate(
     if not blur:
         eta_indices = eta_indices[mask].astype(int)
         phi_indices = phi_indices[mask].astype(int)
+
         # construct grayscale image
-        jet_image[phi_indices, eta_indices] += jet[:, PT_I][mask]
+        # TODO: Maybe find some suitable numpy magic again?
+        for phi_index, eta_index, pt in zip(phi_indices, eta_indices, jet[:, PT_I][mask]):
+            jet_image[phi_index, eta_index] += pt
 
     else:
         for pt, eta, phi in jet[mask]:
@@ -167,7 +171,6 @@ def pixelate(
         if normfactor <= 0.0:
             print("normfactor=", normfactor)
             print(jet)
-            print(eta_indices, phi_indices)
             print(jet_image)
             raise FloatingPointError("Image had no particles!")
         else:
