@@ -165,7 +165,7 @@ for ij in range(RANK, n_per_start*n_starts, SIZE):
     try:
         images = np.array([
             pixelate(
-                cutoff_jet(interpol(step)),
+                interpol(step),
                 npix,
                 img_width=img_width,
                 rotate=rotate,
