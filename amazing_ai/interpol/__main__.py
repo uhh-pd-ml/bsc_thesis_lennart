@@ -47,14 +47,9 @@ USE_MPI = args.mpi
 
 if USE_MPI:
     from mpi4py import MPI
-
     RANK, SIZE = MPI.COMM_WORLD.rank, MPI.COMM_WORLD.size
-    COMM = MPI.COMM_WORLD
-    H5_DRIVER = "mpio"
 else:
     RANK, SIZE = 0, 1
-    COMM = None
-    H5_DRIVER = None
 IS_MAIN = not RANK
 
 n_starts = args.n_starts if args.event_start is None else 1
@@ -81,13 +76,13 @@ file_out_name = file_out_name.format(
 )
 
 file_start = h5py.File(
-    file_start_name, driver=H5_DRIVER, **(dict(comm=COMM) if USE_MPI else {})
+    file_start_name, **(dict(comm=MPI.COMM_WORLD, driver="mpio") if USE_MPI else {})
 )
 file_end = h5py.File(
-    file_end_name, driver=H5_DRIVER, **(dict(comm=COMM) if USE_MPI else {})
+    file_end_name, **(dict(comm=MPI.COMM_WORLD, driver="mpio") if USE_MPI else {})
 )
 file_out = h5py.File(
-    file_out_name, "w", driver=H5_DRIVER, **(dict(comm=COMM) if USE_MPI else {})
+    file_out_name, "w", **(dict(comm=MPI.COMM_WORLD, driver="mpio") if USE_MPI else {})
 )
 
 start_indices = np.sort((
