@@ -8,38 +8,38 @@ PT_I, ETA_I, PHI_I = 0, 1, 2
 __all__ = ("make_image",)
 
 
-def raw_moment(jet: np.ndarray, eta_order: int, phi_order: int) -> float:
-    return (
-        jet[:, PT_I] * (jet[:, ETA_I] ** eta_order) * (jet[:, PHI_I] ** phi_order)
-    ).sum()
+# def raw_moment(jet: np.ndarray, eta_order: int, phi_order: int) -> float:
+#     return (
+#         jet[:, PT_I] * (jet[:, ETA_I] ** eta_order) * (jet[:, PHI_I] ** phi_order)
+#     ).sum()
 
 
-def convert_to_pt_eta_phi(jet: np.ndarray, jet_conts: np.ndarray) -> np.ndarray:
-    import ROOT
+# def convert_to_pt_eta_phi(jet: np.ndarray, jet_conts: np.ndarray) -> np.ndarray:
+#     import ROOT
 
-    def ang_dist(phi1, phi2):
-        dphi = phi1 - phi2
-        if dphi < -math.pi:
-            dphi += 2.0 * math.pi
-        if dphi > math.pi:
-            dphi -= 2.0 * math.pi
-        return dphi
+#     def ang_dist(phi1, phi2):
+#         dphi = phi1 - phi2
+#         if dphi < -math.pi:
+#             dphi += 2.0 * math.pi
+#         if dphi > math.pi:
+#             dphi -= 2.0 * math.pi
+#         return dphi
 
-    jet_conts = jet_conts.reshape((100, 3))
-    jet_conv = np.zeros(jet_conts.shape)
-    jet_eta = jet[ETA_I]
-    jet_phi = jet[PHI_I]
-    pt_sum = 0.0
-    # Loop thru jet conts and convert from px py pz e to pt eta phi m (is there a way to vectorize this?)
-    for i in range(jet_conts.shape[0]):
-        if jet_conts[i][3] <= 0.01:
-            continue  # skip 0 energy jets, save time
-        vec = ROOT.Math.PxPyPzEVector(
-            jet_conts[i, 0], jet_conts[i, 1], jet_conts[i, 2], jet_conts[i, 3]
-        )
-        jet_conv[i] = [vec.Pt(), vec.Eta() - jet_eta, ang_dist(vec.Phi(), jet_phi), 0.0]
-        pt_sum += vec.Pt()
-    return jet_conv
+#     jet_conts = jet_conts.reshape((100, 3))
+#     jet_conv = np.zeros(jet_conts.shape)
+#     jet_eta = jet[ETA_I]
+#     jet_phi = jet[PHI_I]
+#     pt_sum = 0.0
+#     # Loop thru jet conts and convert from px py pz e to pt eta phi m (is there a way to vectorize this?)
+#     for i in range(jet_conts.shape[0]):
+#         if jet_conts[i][3] <= 0.01:
+#             continue  # skip 0 energy jets, save time
+#         vec = ROOT.Math.PxPyPzEVector(
+#             jet_conts[i, 0], jet_conts[i, 1], jet_conts[i, 2], jet_conts[i, 3]
+#         )
+#         jet_conv[i] = [vec.Pt(), vec.Eta() - jet_eta, ang_dist(vec.Phi(), jet_phi), 0.0]
+#         pt_sum += vec.Pt()
+#     return jet_conv
 
 # def make_blur_filter(delta: float, size: int = 5, sigma: float = 0.8):
 #     from scipy.ndimage import gaussian_filter
