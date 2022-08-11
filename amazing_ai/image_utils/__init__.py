@@ -171,7 +171,6 @@ def pixelate(
         if normfactor <= 0.0:
             print("normfactor=", normfactor)
             print(jet)
-            print(jet_image)
             raise FloatingPointError("Image had no particles!")
         else:
             jet_image /= normfactor
