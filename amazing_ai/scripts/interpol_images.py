@@ -6,7 +6,7 @@ import os
 import amazing_datasets
 from amazing_ai.image_utils import pixelate
 from amazing_ai.interpol import emd_energyflow
-from amazing_ai.utils import normalize_jet, cutoff_jet
+from amazing_ai.utils import normalize_jet
 
 
 def parse_args() -> Namespace:

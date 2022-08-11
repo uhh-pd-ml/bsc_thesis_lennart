@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --partition=cms-uhh             ## or allgpu / cms / cms-uhh / maxgpu
 #SBATCH --time=24:00:00
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --job-name interpol_mpi           # give job unique name
 #SBATCH --output ./interpol_log/%j-std.out      # terminal output
 #SBATCH --error ./interpol_log/%j-std.err
@@ -10,7 +10,7 @@
 #SBATCH --constraint=GPU
 
 # #SBATCH --nodelist=max-cmsg004         # you can select specific nodes, if necessary
-# #SBATCH --constraint="P100|V100"        # ask for specific types of GPUs
+#SBATCH --constraint="P100|V100"        # ask for specific types of GPUs
 
 # (GPU drivers, anaconda, .bashrc, etc) --> likely not necessary if you're installing your own cudatoolkit & cuDNN versions
 #source /etc/profile.d/modules.sh
@@ -30,14 +30,17 @@ export PYTHONPATH=""  # openmpi module adds python 2 packages to pythonpath
 # go to your folder with your python scripts
 cd ~/Projects/amazing_ai
 
+START=b
+END=b
+
 # run
 MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
-    python -m amazing_ai.interpol \
-        --file-start @events_s_sr.h5 \
-        --file-end @events_b_sr.h5 \
-        -o @interpol_sb_blur_6000_50.h5 \
-        --blur \
+    python -m amazing_ai.scripts.interpol_images \
+        --file-start @events_${START}_sr.h5 \
+        --file-end @events_${END}_sr.h5 \
+        -o @kjhinterpol_${START}${END}{flags}_{n_starts}_{n_per_start}.h5 \
         --steps 100 \
         -n 6000 \
-        --n-per-start 50 \
+        --n-per-start 100 \
+        --blur \
         --mpi
