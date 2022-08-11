@@ -1,7 +1,6 @@
 from typing import Optional
 import numpy as np
 import math
-from scipy.ndimage import gaussian_filter
 from amazing_ai.utils import rotate_jet, center_jet, flip_jet
 
 PT_I, ETA_I, PHI_I = 0, 1, 2
@@ -43,6 +42,7 @@ def convert_to_pt_eta_phi(jet: np.ndarray, jet_conts: np.ndarray) -> np.ndarray:
     return jet_conv
 
 # def make_blur_filter(delta: float, size: int = 5, sigma: float = 0.8):
+#     from scipy.ndimage import gaussian_filter
 #     pt_filter = np.zeros((size, size))
 #     pt_filter[len(pt_filter)//2, len(pt_filter)//2] = 1
 #     pt_filter = gaussian_filter(pt_filter, sigma)
