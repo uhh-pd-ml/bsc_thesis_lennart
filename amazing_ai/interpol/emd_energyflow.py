@@ -5,10 +5,9 @@ import numpy as np
 __all__ = ("emd_energyflow", )
 
 
-def merge(ev0: np.ndarray, ev1: np.ndarray, R: float=1, lamb: float=0.5) -> np.ndarray:
+def merge(G: np.ndarray, ev0: np.ndarray, ev1: np.ndarray, R: float=1, lamb: float=0.5) -> np.ndarray:
     # Taken from https://github.com/pkomiske/EnergyFlow
     # This is from examples/animation_example.py
-    emdval, G = emd(ev0, ev1, R=R, return_flow=True)
     
     merged = []
     for i in range(len(ev0)):
@@ -30,8 +29,8 @@ def merge(ev0: np.ndarray, ev1: np.ndarray, R: float=1, lamb: float=0.5) -> np.n
     return np.asarray(merged)
 
 def emd_energyflow(start: np.array, end: np.array, n_points: int, R: float = 1.2) -> tuple[float, Callable[[int], np.ndarray]]:
-    distance = emd(start, end, R=R)
+    distance, G = emd(start, end, R=R, return_flow=True)
     def interp(i: int) -> np.ndarray:
-        return merge(start, end, R=R, lamb=1-i/(n_points-1))
+        return merge(G, start, end, R=R, lamb=1-i/(n_points-1))
 
     return distance, interp
