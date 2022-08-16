@@ -1,0 +1,51 @@
+#!/bin/sh
+#SBATCH --partition=cms-uhh ## or allgpu / cms / cms-uhh / maxgpu
+#SBATCH --time=24:00:00
+#SBATCH --nodes=2
+#SBATCH --job-name interpol_losses           # give job unique name
+#SBATCH --output ./interpol_losses_log/%j-std.out      # terminal output
+#SBATCH --error ./interpol_losses_log/%j-std.err
+#S BATCH --mail-type END
+#S BATCH --mail-user lennart.kaemmle@desy.de
+# #SBATCH --constraint=GPU
+
+# #SBATCH --nodelist=max-cmsg004         # you can select specific nodes, if necessary
+#S BATCH --constraint="P100|V100"        # ask for specific types of GPUs
+
+# (GPU drivers, anaconda, .bashrc, etc) --> likely not necessary if you're installing your own cudatoolkit & cuDNN versions
+#source /etc/profile.d/modules.sh
+#module load maxwell
+#module load cuda
+#module load anaconda/3
+#module load mpi/mpich-x86_64
+module load mpi/openmpi3-x86_64
+
+. ~/.bashrc
+export PATH="/home/kaemmlel/miniconda3/envs/torch/bin:$PATH"
+
+set -x
+# export PATH="/home/kaemmlel/miniconda3/envs/torch/bin:$PATH"
+export PYTHONPATH=""  # openmpi module adds python 2 packages to pythonpath
+
+# Recipe for gloo protocol
+#export MASTER_HOST=$(hostname -i)
+#export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+
+# go to your folder with your python scripts
+cd ~/Projects/amazing_ai
+
+# START=s
+# END=b
+# --file-end @events_${END}_sr.h5 \
+
+MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
+    python -m amazing_ai.scripts.interpol_losses \
+        --file-start @events_b_sr.h5 @events_s_sr.h5 \
+        -o @interpol_losses_cmsuhh_{n_starts}{flags}.h5 \
+        --steps 100 \
+        --n-starts 500 \
+        --block-size 100 \
+        --model-batch-size 10000 \
+        --a-to-a \
+        --model out/12139736*/ \
+        --mpi
