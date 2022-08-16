@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from itertools import product
+import json
 import sys
 import numpy as np
 import h5py
@@ -15,8 +16,8 @@ import torch
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    parser.add_argument("--file-start", type=str, required=True, help="File for start")
-    parser.add_argument("--file-end", type=str, required=True, help="File for end")
+    parser.add_argument("--file-start", type=str, nargs="+", required=True, help="Files for start. Splits evenly when multiple specified")
+    parser.add_argument("--file-end", type=str, nargs="+", help="Files for end. Splits evenly when multiple specified")
     parser.add_argument(
         "--event-start",
         type=int,
@@ -76,12 +77,20 @@ n_per_start = args.n_per_start if args.event_end is None else 1
 if args.a_to_a: n_per_start = n_starts
 
 # Figure out file names
-file_start_name = args.file_start
-file_end_name = args.file_end if not args.a_to_a else file_start_name
-if file_start_name.startswith("@"):
-    file_start_name = os.path.join(amazing_datasets.DATA_FOLDER, file_start_name[1:])
-if file_end_name.startswith("@"):
-    file_end_name = os.path.join(amazing_datasets.DATA_FOLDER, file_end_name[1:])
+file_start_names = args.file_start
+file_start_names = [
+    os.path.join(amazing_datasets.DATA_FOLDER, file_start_name[1:])
+    if file_start_name.startswith("@")
+    else file_start_name
+    for file_start_name in file_start_names
+]
+file_end_names = args.file_end if not args.a_to_a else file_start_names
+file_end_names = [
+    os.path.join(amazing_datasets.DATA_FOLDER, file_end_name[1:])
+    if file_end_name.startswith("@")
+    else file_end_name
+    for file_end_name in file_end_names
+]
 file_out_name = args.out
 if file_out_name.startswith("@"):
     file_out_name = os.path.join(amazing_datasets.DATA_FOLDER, file_out_name[1:])
@@ -100,27 +109,39 @@ file_out_name = file_out_name.format(
 )
 
 # Open files
-file_start = h5py.File(file_start_name)
-file_end = h5py.File(file_end_name) if not args.a_to_a else file_start
+files_start = [h5py.File(file_start_name) for file_start_name in file_start_names]
+files_end = [h5py.File(file_end_name) for file_end_name in file_end_names] if not args.a_to_a else files_start
 
 # Figure out and communicate the start/end events
-start_indices = np.sort((
-    np.array([args.event_start])
-    if args.event_start is not None
-    else np.random.choice(range(len(file_start["jet1_PFCands"])), size=n_starts, replace=False)
-))
-end_indices = np.sort(
-    np.array([args.event_end])
-    if args.event_end is not None
-    else np.random.choice(range(len(file_end["jet1_PFCands"])), size=n_per_start, replace=False)
-) if not args.a_to_a else start_indices
+files_start_indices = [
+    np.sort((
+        np.array([args.event_start])
+        if args.event_start is not None
+        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=n_starts, replace=False)    
+    ))
+    for file_start in files_start
+]
+files_end_indices = [
+    np.sort((
+        np.array([args.event_end])
+        if args.event_end is not None
+        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=n_starts, replace=False)    
+    ))
+    for file_end in files_end
+] if not args.a_to_a else files_start_indices
+
 if USE_MPI:
-    start_indices = MPI.COMM_WORLD.bcast(start_indices)
-    end_indices = MPI.COMM_WORLD.bcast(end_indices)
+    files_start_indices = MPI.COMM_WORLD.bcast(files_start_indices)
+    files_end_indices = MPI.COMM_WORLD.bcast(files_end_indices)
 
-
-start_events = file_start["jet1_PFCands"][start_indices.tolist()]
-end_events = file_end["jet1_PFCands"][end_indices.tolist()]
+start_events = np.concatenate([
+    file_start["jet1_PFCands"][start_indices.tolist()]
+    for start_indices, file_start in zip(files_start_indices, files_start)
+])
+end_events = np.concatenate([
+    file_end["jet1_PFCands"][end_indices.tolist()]
+    for end_indices, file_end in zip(files_end_indices, files_end)
+])
 
 steps = args.steps
 
@@ -137,19 +158,19 @@ img_width = 1.2
 
 # Init model
 if IS_MAIN:
-    model = DataParallel(load_model(args.model, gpu=True))
+    model = DataParallel(load_model(args.model, gpu=torch.cuda.is_available()))
     loss_function = nn.MSELoss(reduction="none")
 
     # Init datasets
     file_out = h5py.File(file_out_name, "w")
-    file_out.create_dataset("start_indices", data=start_indices)
-    file_out.create_dataset("end_indices", data=end_indices)
-    emd_dataset = file_out.create_dataset("emd", shape=(n_starts, n_per_start), dtype=np.float32)
-    loss_dataset = file_out.create_dataset("losses", (n_starts, n_per_start, steps), dtype=np.float32)
+    file_out.create_dataset("start_indices", data=np.array(files_start_indices))
+    file_out.create_dataset("end_indices", data=np.array(files_end_indices))
+    emd_dataset = file_out.create_dataset("emd", shape=(len(start_events), len(end_events)), dtype=np.float32)
+    loss_dataset = file_out.create_dataset("losses", (len(start_events), len(end_events), steps), dtype=np.float32)
     file_out.attrs.update(
         {
-            "file_start": args.file_start,
-            "file_end": args.file_end,
+            "file_start": json.dumps(args.file_start),
+            "file_end": json.dumps(args.file_end),
             "npix": args.npix,
             "n_starts": n_starts,
             "n_per_start": n_per_start,
@@ -170,10 +191,10 @@ if IS_MAIN:
 if USE_MPI:
     MPI.COMM_WORLD.barrier()
 
-n_blocks = np.ceil(n_starts / BLOCK_SIZE) * np.ceil(n_per_start / BLOCK_SIZE)
+n_blocks = np.ceil(len(start_events) / BLOCK_SIZE) * np.ceil(len(end_events) / BLOCK_SIZE)
 
-for block_index, (i, j) in enumerate(product(range(0, n_starts, BLOCK_SIZE), range(0, n_per_start, BLOCK_SIZE))):
-    this_block_height, this_block_width = (min(i+BLOCK_SIZE, n_starts) - i), (min(j+BLOCK_SIZE, n_per_start) - j)
+for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_SIZE), range(0, len(end_events), BLOCK_SIZE))):
+    this_block_height, this_block_width = (min(i+BLOCK_SIZE, len(start_events)) - i), (min(j+BLOCK_SIZE, len(end_events)) - j)
     b_is = np.arange(i, i + this_block_height)
     b_js = np.arange(j, j + this_block_width)
     # List of start-end pairs for this block
@@ -225,7 +246,7 @@ for block_index, (i, j) in enumerate(product(range(0, n_starts, BLOCK_SIZE), ran
     # TODO: Support multiple models
     b_loss = np.zeros((len(b_pairs)*args.steps,), dtype=np.float16)
     for chunk_index, t_orig_chunk in enumerate(t_orig_chunks):
-        t_orig_chunk_gpu = t_orig_chunk.to("cuda")
+        t_orig_chunk_gpu = t_orig_chunk.to("cuda" if torch.cuda.is_available() else "cpu")
         t_pred = model(t_orig_chunk_gpu)
         chunk_loss: np.ndarray = loss_function(t_orig_chunk_gpu, t_pred).mean((1, 2, 3)).detach().cpu().numpy()
         b_loss[chunk_index*MODEL_BATCH_SIZE:chunk_index*MODEL_BATCH_SIZE+len(chunk_loss)] = chunk_loss
@@ -238,7 +259,7 @@ for block_index, (i, j) in enumerate(product(range(0, n_starts, BLOCK_SIZE), ran
 if USE_MPI:
     MPI.COMM_WORLD.barrier()
 
-file_start.close()
-file_end.close()
+for file in files_start+files_end:
+    file.close()
 if IS_MAIN:
     file_out.close()
