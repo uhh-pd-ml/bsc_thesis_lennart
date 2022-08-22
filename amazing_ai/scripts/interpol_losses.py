@@ -7,7 +7,7 @@ import h5py
 import os
 import amazing_datasets
 from amazing_ai.image_utils import pixelate
-from amazing_ai.interpol import emd_energyflow
+from amazing_ai.interpol import interpol_emd
 from amazing_ai.utils import normalize_jet
 from amazing_ai.auto_encoder.model import load_model
 from torch import nn
@@ -210,7 +210,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     for pair_index, (p_i, p_j) in enumerate(p_pairs):
         event_start, event_end = normalize_jet(start_events[p_i]), normalize_jet(end_events[p_j])
 
-        emd, interpol = emd_energyflow(event_start, event_end, args.steps, R=1.2)
+        emd, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2)
         pair_emds[pair_index] = emd
 
         try:
