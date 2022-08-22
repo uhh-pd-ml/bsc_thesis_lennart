@@ -42,7 +42,7 @@ def parse_args() -> Namespace:
         "--steps", type=int, default=500, help="Number of interpolation steps"
     )
     parser.add_argument("-n", "--n-starts", type=int, default=[10], nargs="+", help="Number of starts. Either pass one value or for each start file")
-    parser.add_argument("--n-per-start", type=int, default=[10], nargs="+", help="Number of ends per start. Either pass one value or for each end file")
+    parser.add_argument("--n-ends", type=int, default=[10], nargs="+", help="Number of ends per start. Either pass one value or for each end file")
     # TODO: Write to existing file, select individual chunks
     parser.add_argument("--out", "-o", type=str, help="Output file (hdf5 format)")
     parser.add_argument("--blur", default=False, action="store_true", help="Blur the images")
@@ -90,13 +90,13 @@ file_end_names = [
 
 # Number of start/end events
 n_starts = args.n_starts if args.event_start is None else [1]
-n_per_start = args.n_per_start if args.event_end is None else [1]
+n_ends = args.n_ends if args.event_end is None else [1]
 if len(n_starts) == 1: n_starts *= len(file_start_names)
-if len(n_per_start) == 1: n_per_start *= len(file_end_names)
-if args.a_to_a: n_per_start = n_starts
+if len(n_ends) == 1: n_ends *= len(file_end_names)
+if args.a_to_a: n_ends = n_starts
 
 assert len(n_starts) == len(file_start_names)
-assert len(n_per_start) == len(file_end_names)
+assert len(n_ends) == len(file_end_names)
 
 file_out_name = args.out
 if file_out_name.startswith("@"):
@@ -111,7 +111,7 @@ file_out_name = file_out_name.format(
     flags=flags,
     steps=args.steps,
     n_starts="-".join(map(str, n_starts)),
-    n_per_start="-".join(map(str, n_per_start)),
+    n_ends="-".join(map(str, n_ends)),
     model=args.model,
 )
 
@@ -132,9 +132,9 @@ files_end_indices = [
     np.sort((
         np.array([args.event_end])
         if args.event_end is not None
-        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_per_start, replace=False)    
+        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_ends, replace=False)    
     ))
-    for file_end, f_n_per_start in zip(files_end, n_per_start)
+    for file_end, f_n_ends in zip(files_end, n_ends)
 ] if not args.a_to_a else files_start_indices
 
 if USE_MPI:
@@ -180,7 +180,7 @@ if IS_MAIN:
             "file_end": json.dumps(args.file_end),
             "npix": args.npix,
             "n_starts": n_starts,
-            "n_per_start": n_per_start,
+            "n_ends": n_ends,
             "steps": args.steps,
             "blur": blur,
             "rotate": rotate,
