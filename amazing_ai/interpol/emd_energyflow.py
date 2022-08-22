@@ -21,7 +21,7 @@ def merge(G: np.ndarray, ev0: np.ndarray, ev1: np.ndarray, R: float=1, lamb: flo
         for i in range(len(ev0)):
             if G[i,-1] > 0:
                 merged.append([G[i,-1]*lamb, ev0[i,1], ev0[i,2]])
-    else:
+    elif np.sum(ev0[:,0]) < np.sum(ev1[:,0]):
         for j in range(len(ev1)):
             if G[-1,j] > 0:
                 merged.append([G[-1,j]*(1-lamb), ev1[j,1], ev1[j,2]])            
