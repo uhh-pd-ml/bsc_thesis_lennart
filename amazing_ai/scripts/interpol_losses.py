@@ -41,8 +41,9 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--steps", type=int, default=500, help="Number of interpolation steps"
     )
-    parser.add_argument("-n", "--n-starts", type=int, default=10, help="Number of starts")
-    parser.add_argument("--n-per-start", type=int, default=10, help="Number of ends per start")
+    parser.add_argument("-n", "--n-starts", type=int, default=[10], nargs="+", help="Number of starts. Either pass one value or for each start file")
+    parser.add_argument("--n-per-start", type=int, default=[10], nargs="+", help="Number of ends per start. Either pass one value or for each end file")
+    # TODO: Write to existing file, select individual chunks
     parser.add_argument("--out", "-o", type=str, help="Output file (hdf5 format)")
     parser.add_argument("--blur", default=False, action="store_true", help="Blur the images")
     parser.add_argument("--save-images", default=False, action="store_true", help="Whether to save the images")
@@ -71,11 +72,6 @@ else:
     RANK, SIZE = 0, 1
 IS_MAIN = not RANK
 
-# Number of start/end events
-n_starts = args.n_starts if args.event_start is None else 1
-n_per_start = args.n_per_start if args.event_end is None else 1
-if args.a_to_a: n_per_start = n_starts
-
 # Figure out file names
 file_start_names = args.file_start
 file_start_names = [
@@ -91,6 +87,17 @@ file_end_names = [
     else file_end_name
     for file_end_name in file_end_names
 ]
+
+# Number of start/end events
+n_starts = args.n_starts if args.event_start is None else [1]
+n_per_start = args.n_per_start if args.event_end is None else [1]
+if len(n_starts) == 1: n_starts *= len(file_start_names)
+if len(n_per_start) == 1: n_per_start *= len(file_end_names)
+if args.a_to_a: n_per_start = n_starts
+
+assert len(n_starts) == len(file_start_names)
+assert len(n_per_start) == len(file_end_names)
+
 file_out_name = args.out
 if file_out_name.startswith("@"):
     file_out_name = os.path.join(amazing_datasets.DATA_FOLDER, file_out_name[1:])
@@ -103,8 +110,8 @@ if args.a_to_a:
 file_out_name = file_out_name.format(
     flags=flags,
     steps=args.steps,
-    n_starts=n_starts,
-    n_per_start=n_per_start,
+    n_starts="-".join(map(str, n_starts)),
+    n_per_start="-".join(map(str, n_per_start)),
     model=args.model,
 )
 
@@ -117,17 +124,17 @@ files_start_indices = [
     np.sort((
         np.array([args.event_start])
         if args.event_start is not None
-        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=n_starts, replace=False)    
+        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=f_n_starts, replace=False)    
     ))
-    for file_start in files_start
+    for file_start, f_n_starts in zip(files_start, n_starts)
 ]
 files_end_indices = [
     np.sort((
         np.array([args.event_end])
         if args.event_end is not None
-        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=n_starts, replace=False)    
+        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_per_start, replace=False)    
     ))
-    for file_end in files_end
+    for file_end, f_n_per_start in zip(files_end, n_per_start)
 ] if not args.a_to_a else files_start_indices
 
 if USE_MPI:
@@ -163,8 +170,8 @@ if IS_MAIN:
 
     # Init datasets
     file_out = h5py.File(file_out_name, "w")
-    file_out.create_dataset("start_indices", data=np.array(files_start_indices))
-    file_out.create_dataset("end_indices", data=np.array(files_end_indices))
+    file_out.create_dataset("start_indices", data=np.concatenate(files_start_indices))
+    file_out.create_dataset("end_indices", data=np.concatenate(files_end_indices))
     emd_dataset = file_out.create_dataset("emd", shape=(len(start_events), len(end_events)), dtype=np.float32)
     loss_dataset = file_out.create_dataset("losses", (len(start_events), len(end_events), steps), dtype=np.float32)
     file_out.attrs.update(
@@ -202,6 +209,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     b_pairs = list(product(b_is, b_js))
 
     # Scatter tasks over processes
+    # TODO: Perhaps replace MPI with torch.distributed?
     p_pairs = MPI.COMM_WORLD.scatter(np.array_split(b_pairs, MPI.COMM_WORLD.size)) if USE_MPI else b_pairs
 
     pair_images = np.zeros((len(p_pairs), args.steps, npix, npix), dtype=np.float16)
