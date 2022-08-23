@@ -37,15 +37,17 @@ cd ~/Projects/amazing_ai
 # START=s
 # END=b
 # --file-end @events_${END}_sr.h5 \
+# --a-to-a \
 
 MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
     python -m amazing_ai.scripts.interpol_losses \
         --file-start @events_b_sr.h5 @events_s_sr.h5 \
-        -o @interpol_losses_cmsuhh_{n_starts}{flags}.h5 \
+        --n-starts 10000 10000 \
+        --file-end @events_b_sr.h5 \
+        --n-ends 200 \
+        -o @interpol_losses_any-b_{n_starts}_{n_ends}{flags}.h5 \
         --steps 100 \
-        --n-starts 500 \
-        --block-size 100 \
+        --block-size 50 \
         --model-batch-size 10000 \
-        --a-to-a \
         --model out/12139736*/ \
         --mpi
