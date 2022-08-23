@@ -7,7 +7,7 @@
 #SBATCH --error ./interpol_losses_log/%j-std.err
 #S BATCH --mail-type END
 #S BATCH --mail-user lennart.kaemmle@desy.de
-# #SBATCH --constraint=GPU
+#SBATCH --constraint=GPU
 
 # #SBATCH --nodelist=max-cmsg004         # you can select specific nodes, if necessary
 #S BATCH --constraint="P100|V100"        # ask for specific types of GPUs
