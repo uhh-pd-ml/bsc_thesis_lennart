@@ -1,7 +1,6 @@
 from typing import Callable
 from energyflow.emd import emd
 import numpy as np
-from amazing_ai.utils import normalize_jet
 
 __all__ = ("interpol_emd", )
 
@@ -53,6 +52,7 @@ def interpol_emd(e0: np.ndarray, e1: np.ndarray, n_points: int, R: float = 1.2) 
     
     def _interpolate(step: float):
         lamb = step/(n_points-1)
-        return normalize_jet((1-lamb)*exchange_start + lamb*exchange_end)
+        event = (1-lamb)*exchange_start + lamb*exchange_end
+        return event[event[:, 0] > 0]
         
     return distance, _interpolate
