@@ -50,6 +50,7 @@ def parse_args() -> Namespace:
     parser.add_argument("--npix", type=int, default=54, help="Number of pixels")
     parser.add_argument("--block-size", type=int, default=20, help="Size of parallelized block for image generation")
     parser.add_argument("--model-batch-size", type=int, default=5000, help="Batch size for the AE")
+    parser.add_argument("--interpol-radius", type=int, help="Interpolate inside a circle around the start event of radius given by the metric")
     parser.add_argument(
         "--mpi", default=False, action="store_true", help="Activate MPI support"
     )
@@ -113,6 +114,7 @@ file_out_name = file_out_name.format(
     n_starts="-".join(map(str, n_starts)),
     n_ends="-".join(map(str, n_ends)),
     model=args.model,
+    interpol_radius=args.interpol_radius
 )
 
 # Open files
@@ -191,7 +193,8 @@ if IS_MAIN:
             "sigma": sigma,
             "blur_size": blur_size,
             "img_width": img_width,
-            "model": args.model
+            "model": args.model,
+            "interpol_radius": args.interpol_radius
         }
     )
 
@@ -218,7 +221,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     for pair_index, (p_i, p_j) in enumerate(p_pairs):
         event_start, event_end = normalize_jet(start_events[p_i]), normalize_jet(end_events[p_j])
 
-        emd, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2)
+        emd, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2, emd_radius=args.interpol_radius)
         pair_emds[pair_index] = emd
 
         try:
