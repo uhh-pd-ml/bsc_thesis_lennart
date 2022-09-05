@@ -56,7 +56,7 @@ def interpol_emd(e0: np.ndarray, e1: np.ndarray, n_points: int, R: float = 1.2, 
     
     def _interpolate(step: float):
         lamb = step/(n_points-1)
-        if emd_radius is not None:
+        if distance and emd_radius is not None:
             lamb *= emd_radius/distance
         lamb = min(lamb, 1)
         event = (1-lamb)*exchange_start + lamb*exchange_end
