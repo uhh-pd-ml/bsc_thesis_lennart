@@ -227,13 +227,13 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
         try:
             images = np.array([pixelate(
                 interpol(step),
-                npix,
+                args.npix,
                 img_width=img_width,
                 rotate=rotate,
                 center=center,
                 flip=flip,
                 norm=norm,
-                blur=blur,
+                blur=args.blur,
                 sigma=sigma,
                 blur_size=blur_size,
             ) for step in range(args.steps)])
