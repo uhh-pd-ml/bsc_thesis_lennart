@@ -10,7 +10,7 @@
 #SBATCH --constraint=GPU
 
 # #SBATCH --nodelist=max-cmsg004         # you can select specific nodes, if necessary
-# #SBATCH --constraint="P100|V100"        # ask for specific types of GPUs
+#SBATCH --constraint="P100|V100"        # ask for specific types of GPUs
 
 # (GPU drivers, anaconda, .bashrc, etc) --> likely not necessary if you're installing your own cudatoolkit & cuDNN versions
 #source /etc/profile.d/modules.sh
@@ -31,4 +31,4 @@ export PYTHONPATH=""  # openmpi module adds python 2 packages to pythonpath
 cd ~/Projects/amazing_ai
 
 # run
-time python -m amazing_ai.scripts.interpol_loss --model out/12017325*/ --interpol @interpol_ss_blur_6000_50.h5
+time python -m amazing_ai.scripts.interpol_loss --model out/12145719*/ --interpol @interpol_ss_blur_6000_100.h5
