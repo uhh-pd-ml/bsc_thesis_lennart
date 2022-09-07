@@ -7,7 +7,7 @@ import h5py
 import os
 import amazing_datasets
 from amazing_ai.image_utils import pixelate
-from amazing_ai.interpol import interpol_emd
+from amazing_ai.interpol import interpol_emd, interpol_linear
 from amazing_ai.utils import normalize_jet
 from amazing_ai.auto_encoder.model import load_model
 from torch import nn
@@ -51,6 +51,7 @@ def parse_args() -> Namespace:
     parser.add_argument("--block-size", type=int, default=20, help="Size of parallelized block for image generation")
     parser.add_argument("--model-batch-size", type=int, default=5000, help="Batch size for the AE")
     parser.add_argument("--interpol-radius", type=int, help="Interpolate inside a circle around the start event of radius given by the metric")
+    parser.add_argument("--interpol-method", type=str, choices=["emd", "linear"], default="emd", help="Interpolation method.")
     parser.add_argument(
         "--mpi", default=False, action="store_true", help="Activate MPI support"
     )
@@ -114,7 +115,8 @@ file_out_name = file_out_name.format(
     n_starts="-".join(map(str, n_starts)),
     n_ends="-".join(map(str, n_ends)),
     model=args.model,
-    interpol_radius=args.interpol_radius
+    interpol_radius=args.interpol_radius,
+    interpol_method=args.interpol_method
 )
 
 # Open files
@@ -155,8 +157,6 @@ end_events = np.concatenate([
 steps = args.steps
 
 # Image generation parameters
-npix = args.npix
-blur = args.blur
 rotate = False
 center = True
 flip = False
@@ -174,7 +174,7 @@ if IS_MAIN:
     file_out = h5py.File(file_out_name, "w")
     file_out.create_dataset("start_indices", data=np.concatenate(files_start_indices))
     file_out.create_dataset("end_indices", data=np.concatenate(files_end_indices))
-    emd_dataset = file_out.create_dataset("emd", shape=(len(start_events), len(end_events)), dtype=np.float32)
+    distance_dataset = file_out.create_dataset("distance", shape=(len(start_events), len(end_events)), dtype=np.float32)
     loss_dataset = file_out.create_dataset("losses", (len(start_events), len(end_events), steps), dtype=np.float32)
     file_out.attrs.update(
         {
@@ -184,17 +184,17 @@ if IS_MAIN:
             "n_starts": n_starts,
             "n_ends": n_ends,
             "steps": args.steps,
-            "blur": blur,
+            "blur": args.blur,
             "rotate": rotate,
             "center": center,
             "flip": flip,
             "norm": norm,
-            "blur": blur,
             "sigma": sigma,
             "blur_size": blur_size,
             "img_width": img_width,
             "model": args.model,
-            "interpol_radius": args.interpol_radius
+            "interpol_radius": args.interpol_radius or 0,
+            "interpol_method": args.interpol_method,
         }
     )
 
@@ -215,14 +215,17 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     # TODO: Perhaps replace MPI with torch.distributed?
     p_pairs = MPI.COMM_WORLD.scatter(np.array_split(b_pairs, MPI.COMM_WORLD.size)) if USE_MPI else b_pairs
 
-    pair_images = np.zeros((len(p_pairs), args.steps, npix, npix), dtype=np.float16)
-    pair_emds = np.zeros((len(p_pairs),), dtype=np.float16)
+    pair_images = np.zeros((len(p_pairs), args.steps, args.npix, args.npix), dtype=np.float16)
+    pair_distances = np.zeros((len(p_pairs),), dtype=np.float16)
 
     for pair_index, (p_i, p_j) in enumerate(p_pairs):
         event_start, event_end = normalize_jet(start_events[p_i]), normalize_jet(end_events[p_j])
 
-        emd, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2, emd_radius=args.interpol_radius)
-        pair_emds[pair_index] = emd
+        if args.interpol_method == "emd":
+            distance, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2, emd_radius=args.interpol_radius)
+        elif args.interpol_method == "linear":
+            distance, interpol = interpol_linear(event_start, event_end, args.steps)
+        pair_distances[pair_index] = distance
 
         try:
             images = np.array([pixelate(
@@ -243,12 +246,12 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
 
     if USE_MPI:
         gather_images = MPI.COMM_WORLD.gather(pair_images)
-        gather_emds = MPI.COMM_WORLD.gather(pair_emds)
+        gather_distances = MPI.COMM_WORLD.gather(pair_distances)
     if not IS_MAIN:
         continue
     # Only do this as main process
     b_images = np.concatenate(gather_images) if USE_MPI else pair_images  # pair, step, npix, npix
-    b_emds = (np.concatenate(gather_emds) if USE_MPI else pair_emds).reshape((this_block_height, this_block_width))  # start, end
+    b_distances = (np.concatenate(gather_distances) if USE_MPI else pair_distances).reshape((this_block_height, this_block_width))  # start, end
     
     t_images = torch.from_numpy(b_images).float()[:, :, None, :, :]  # pair, step, channel, npix, npix
     t_orig = t_images.flatten(end_dim=1)  # pairstep, channel, npix, npix
@@ -264,7 +267,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     b_loss = b_loss.reshape((this_block_height, this_block_width, args.steps))
 
     loss_dataset[i:i+this_block_height, j:j+this_block_width] = b_loss
-    emd_dataset[i:i+this_block_height, j:j+this_block_width] = b_emds
+    distance_dataset[i:i+this_block_height, j:j+this_block_width] = b_distances
     print(f"Block {block_index}/{int(n_blocks)} done")
 
 if USE_MPI:
