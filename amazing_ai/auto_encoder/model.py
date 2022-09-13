@@ -4,11 +4,11 @@ from typing import Optional
 from torch import nn, Tensor
 import torch
 
-
-class AE(nn.Module):
+class AutoEncoder(nn.Module):
     encoder: nn.Sequential
     decoder: nn.Sequential
 
+class AE(AutoEncoder):
     def __init__(self, latent_space_size: int, npix: int = 42) -> None:
         super().__init__()
 
@@ -78,10 +78,7 @@ class AE(nn.Module):
         return reconstructed
 
 
-class NAE(nn.Module):
-    encoder: nn.Sequential
-    decoder: nn.Sequential
-
+class NAE(AutoEncoder):
     def __init__(self, latent_space_size: int = 40, npix: int = 42) -> None:
         super().__init__()
 
@@ -135,7 +132,7 @@ class NAE(nn.Module):
         reconstructed = self.decoder(encoded)
         return reconstructed
 
-def load_model(path: str, gpu: bool = False, epoch: Optional[int] = None, *args, **kwargs) -> nn.Module:
+def load_model(path: str, gpu: bool = False, epoch: Optional[int] = None, *args, **kwargs) -> AutoEncoder:
     with open(os.path.join(path, "info.json")) as f:
         info = json.load(f)
 
