@@ -175,7 +175,7 @@ with torch.no_grad():
     for i, e0_latent_t in enumerate(start_latent_t):
         for j, e1_latent_t in enumerate(end_latent_t):
             distance = (e0_latent_t - e1_latent_t).norm()
-            alpha = torch.clamp(args.interpol_radius / distance, max=1)
+            alpha = torch.clamp(args.interpol_radius / distance, max=1) if args.interpol_radius is not None else 1
             latent_lerp_t = torch.lerp(e0_latent_t, e1_latent_t, alpha*weights)
             images2_t = decoder(latent_lerp_t)
             latent2_t = encoder(images2_t)
