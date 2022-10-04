@@ -4,7 +4,6 @@ import json
 import sys
 import numpy as np
 import h5py
-import os
 import amazing_datasets
 from amazing_ai.image_utils import pixelate
 from amazing_ai.interpol import interpol_emd, interpol_linear
@@ -46,6 +45,7 @@ def parse_args() -> Namespace:
     # TODO: Write to existing file, select individual chunks
     parser.add_argument("--out", "-o", type=str, help="Output file (hdf5 format)")
     parser.add_argument("--blur", default=False, action="store_true", help="Blur the images")
+    parser.add_argument("--rotate", default=False, action="store_true", help="Rotate the images")
     parser.add_argument("--save-images", default=False, action="store_true", help="Whether to save the images")
     parser.add_argument("--npix", type=int, default=54, help="Number of pixels")
     parser.add_argument("--block-size", type=int, default=20, help="Size of parallelized block for image generation")
@@ -75,20 +75,8 @@ else:
 IS_MAIN = not RANK
 
 # Figure out file names
-file_start_names = args.file_start
-file_start_names = [
-    os.path.join(amazing_datasets.DATA_FOLDER, file_start_name[1:])
-    if file_start_name.startswith("@")
-    else file_start_name
-    for file_start_name in file_start_names
-]
-file_end_names = args.file_end if not args.a_to_a else file_start_names
-file_end_names = [
-    os.path.join(amazing_datasets.DATA_FOLDER, file_end_name[1:])
-    if file_end_name.startswith("@")
-    else file_end_name
-    for file_end_name in file_end_names
-]
+file_start_names = amazing_datasets.resolve_paths(args.file_start)
+file_end_names = amazing_datasets.resolve_paths(args.file_end) if not args.a_to_a else file_start_names
 
 # Number of start/end events
 n_starts = args.n_starts if args.event_start is None else [1]
@@ -100,15 +88,12 @@ if args.a_to_a: n_ends = n_starts
 assert len(n_starts) == len(file_start_names)
 assert len(n_ends) == len(file_end_names)
 
-file_out_name = args.out
-if file_out_name.startswith("@"):
-    file_out_name = os.path.join(amazing_datasets.DATA_FOLDER, file_out_name[1:])
+file_out_name = amazing_datasets.resolve_path(args.out)
+
 # Form outname
 flags = ""
-if args.blur:
-    flags += "_blur"
-if args.a_to_a:
-    flags += "_ata"
+if args.blur: flags += "_blur"
+if args.a_to_a: flags += "_ata"
 file_out_name = file_out_name.format(
     flags=flags,
     steps=args.steps,
@@ -128,7 +113,7 @@ files_start_indices = [
     np.sort((
         np.array([args.event_start])
         if args.event_start is not None
-        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=f_n_starts, replace=False)    
+        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=f_n_starts, replace=False)
     ))
     for file_start, f_n_starts in zip(files_start, n_starts)
 ]
@@ -136,7 +121,7 @@ files_end_indices = [
     np.sort((
         np.array([args.event_end])
         if args.event_end is not None
-        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_ends, replace=False)    
+        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_ends, replace=False)
     ))
     for file_end, f_n_ends in zip(files_end, n_ends)
 ] if not args.a_to_a else files_start_indices
@@ -157,17 +142,14 @@ end_events = np.concatenate([
 steps = args.steps
 
 # Image generation parameters
-rotate = False
-center = True
-flip = False
-norm = True
+flip = False  # Disabled for not being continuous
 sigma = 0.6
 blur_size = 9
 img_width = 1.2
 
 # Init model
 if IS_MAIN:
-    model = DataParallel(load_model(args.model, gpu=torch.cuda.is_available()))
+    ae_model = DataParallel(load_model(args.model, gpu=torch.cuda.is_available()))
     loss_function = nn.MSELoss(reduction="none")
 
     # Init datasets
@@ -185,10 +167,10 @@ if IS_MAIN:
             "n_ends": n_ends,
             "steps": args.steps,
             "blur": args.blur,
-            "rotate": rotate,
-            "center": center,
+            "rotate": args.rotate,
+            "center": True,
             "flip": flip,
-            "norm": norm,
+            "norm": True,
             "sigma": sigma,
             "blur_size": blur_size,
             "img_width": img_width,
@@ -232,10 +214,10 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
                 interpol(step),
                 args.npix,
                 img_width=img_width,
-                rotate=rotate,
-                center=center,
+                rotate=args.rotate,
+                center=True,
                 flip=flip,
-                norm=norm,
+                norm=True,
                 blur=args.blur,
                 sigma=sigma,
                 blur_size=blur_size,
@@ -261,7 +243,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
     b_loss = np.zeros((len(b_pairs)*args.steps,), dtype=np.float16)
     for chunk_index, t_orig_chunk in enumerate(t_orig_chunks):
         t_orig_chunk_gpu = t_orig_chunk.to("cuda" if torch.cuda.is_available() else "cpu")
-        t_pred = model(t_orig_chunk_gpu)
+        t_pred = ae_model(t_orig_chunk_gpu)
         chunk_loss: np.ndarray = loss_function(t_orig_chunk_gpu, t_pred).mean((1, 2, 3)).detach().cpu().numpy()
         b_loss[chunk_index*MODEL_BATCH_SIZE:chunk_index*MODEL_BATCH_SIZE+len(chunk_loss)] = chunk_loss
     b_loss = b_loss.reshape((this_block_height, this_block_width, args.steps))
