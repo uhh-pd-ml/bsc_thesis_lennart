@@ -128,23 +128,30 @@ def pixelate(
     if center:
         jet = center_jet(jet)
 
-    # transition to indices
-    eta_indices = mid_pix + np.round(jet[:, ETA_I] / pix_width)
-    phi_indices = mid_pix + np.round(jet[:, PHI_I] / pix_width)
-
-    # delete elements outside of range
-    mask = (eta_indices >= 0) & (eta_indices < npix) & (phi_indices >= 0) & (phi_indices < npix)
-
     if not blur:
-        eta_indices = eta_indices[mask].astype(int)
-        phi_indices = phi_indices[mask].astype(int)
+        # eta_indices = eta_indices[mask].astype(int)
+        # phi_indices = phi_indices[mask].astype(int)
 
         # construct grayscale image
-        # TODO: Maybe find some suitable numpy magic again?
-        for phi_index, eta_index, pt in zip(phi_indices, eta_indices, jet[:, PT_I][mask]):
-            jet_image[phi_index, eta_index] += pt
+        # TODO: Change to numpy.histogram2d
+        # for phi_index, eta_index, pt in zip(phi_indices, eta_indices, jet[:, PT_I][mask]):
+            # jet_image[phi_index, eta_index] += pt
+
+        jet_image = np.histogram2d(
+            jet[:, PHI_I],
+            jet[:, ETA_I],
+            weights=jet[:, PT_I],
+            bins=npix,
+            range=((-img_width/2, img_width/2), (-img_width/2, img_width/2))
+        )[0].astype(np.float16)
 
     else:
+        # transition to indices
+        eta_indices = mid_pix + np.round(jet[:, ETA_I] / pix_width)
+        phi_indices = mid_pix + np.round(jet[:, PHI_I] / pix_width)
+
+        # delete elements outside of range
+        mask = (eta_indices >= 0) & (eta_indices < npix) & (phi_indices >= 0) & (phi_indices < npix)
         for pt, eta, phi in jet[mask]:
             floored_eta_i = int(mid_pix + np.round(eta / pix_width))
             floored_phi_i = int(mid_pix + np.round(phi / pix_width))
