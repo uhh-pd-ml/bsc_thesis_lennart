@@ -129,8 +129,12 @@ def pixelate(
         jet = center_jet(jet)
 
     if not blur:
+        # eta_indices = mid_pix + np.round(jet[:, ETA_I] / pix_width)
+        # phi_indices = mid_pix + np.round(jet[:, PHI_I] / pix_width)
+        # mask = (eta_indices >= 0) & (eta_indices < npix) & (phi_indices >= 0) & (phi_indices < npix)
         # eta_indices = eta_indices[mask].astype(int)
         # phi_indices = phi_indices[mask].astype(int)
+
 
         # construct grayscale image
         # TODO: Change to numpy.histogram2d
