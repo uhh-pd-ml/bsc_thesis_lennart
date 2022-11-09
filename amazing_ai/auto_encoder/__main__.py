@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from .model import MODELS
 from .dataset import get_datasets
-from amazing_datasets import get_file
+from amazing_datasets import resolve_path
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
@@ -59,9 +59,7 @@ model = MODELS[args.model](latent_space_size=args.latent_space_size, npix=args.n
 
 optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-data_file = (
-    get_file(args.data[1:]) if args.data.startswith("@") else h5py.File(args.data)
-)
+data_file = h5py.File(resolve_path(args.data))
 
 train_data, test_data, val_data = get_datasets(
     data_file, args.train_size, args.val_size
