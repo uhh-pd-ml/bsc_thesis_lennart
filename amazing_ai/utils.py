@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 import h5py
-from typing import Literal, Union
+from typing import Literal, Union, Tuple
 
 PT_I, ETA_I, PHI_I = 0, 1, 2
 
@@ -62,7 +62,7 @@ def normalize_jet(jet: np.ndarray) -> np.ndarray:
 def cutoff_jet(jet: np.ndarray, cutoff_log: float = 1.) -> np.ndarray:
     return jet[jet[:, PT_I] > np.exp(cutoff_log)]
 
-def rotate_jet(jet: np.ndarray) -> np.ndarray:
+def rotate_jet(jet: np.ndarray, return_theta: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, bool]]:
     if jet.shape[0] < 2:
         return jet
 
@@ -82,24 +82,33 @@ def rotate_jet(jet: np.ndarray) -> np.ndarray:
     transformed_mat = rotation_mat @ coords
     eta_transformed, phi_transformed = transformed_mat
 
-    return np.column_stack([
+    rotated_event = np.column_stack([
         jet[:, PT_I],
         eta_transformed,
         phi_transformed
     ])
 
-def center_jet(jet: np.ndarray) -> np.ndarray:
+    if return_theta:
+        return rotated_event, theta
+    return rotated_event
+
+def center_jet(jet: np.ndarray, return_center: bool = False):
     eta_avg = np.average(jet[:, ETA_I], weights=jet[:,PT_I])
     phi_avg = np.average(jet[:, PHI_I], weights=jet[:,PT_I])
     jet[:, ETA_I] -= eta_avg
     jet[:, PHI_I] -= phi_avg
+    if return_center:
+        return jet, np.array((eta_avg, phi_avg))
     return jet
 
-def flip_jet(jet: np.ndarray) -> np.ndarray:
+def flip_jet(jet: np.ndarray, return_flip: bool = False):
     argmax_pt = np.argmax(jet[:, PT_I])
     ptmax_eta, ptmax_phi = jet[argmax_pt, ETA_I], jet[argmax_pt, PHI_I]
     if ptmax_eta < 0:
         jet[:, ETA_I] *= -1.0
     if ptmax_phi < 0:
         jet[:, PHI_I] *= -1.0
+    
+    if return_flip:
+        return jet, (ptmax_eta < 0, ptmax_phi < 0)
     return jet
