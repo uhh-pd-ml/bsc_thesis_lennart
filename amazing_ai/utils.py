@@ -37,6 +37,7 @@ def get_jet(file: Union[h5py.File, str], i: int, jet: Literal[1, 2] = 1, normali
     return normalize_jet(jet)
 
 def normalize_jet(jet: np.ndarray) -> np.ndarray:
+    # TODO: Refactor to normalize_event
     if jet.ndim != 2:
         jet = jet.reshape(-1, 3)
 
@@ -60,9 +61,11 @@ def normalize_jet(jet: np.ndarray) -> np.ndarray:
     return jet
 
 def cutoff_jet(jet: np.ndarray, cutoff_log: float = 1.) -> np.ndarray:
+    # TODO: Refactor to cutoff_event
     return jet[jet[:, PT_I] > np.exp(cutoff_log)]
 
 def rotate_jet(jet: np.ndarray, return_theta: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, bool]]:
+    # TODO: Refactor to rotate_event
     if jet.shape[0] < 2:
         return jet
 
@@ -93,6 +96,7 @@ def rotate_jet(jet: np.ndarray, return_theta: bool = False) -> Union[np.ndarray,
     return rotated_event
 
 def center_jet(jet: np.ndarray, return_center: bool = False):
+    # TODO: Refactor to center_event
     eta_avg = np.average(jet[:, ETA_I], weights=jet[:,PT_I])
     phi_avg = np.average(jet[:, PHI_I], weights=jet[:,PT_I])
     jet[:, ETA_I] -= eta_avg
@@ -102,6 +106,7 @@ def center_jet(jet: np.ndarray, return_center: bool = False):
     return jet
 
 def flip_jet(jet: np.ndarray, return_flip: bool = False):
+    # TODO: Refactor to flip_event
     argmax_pt = np.argmax(jet[:, PT_I])
     ptmax_eta, ptmax_phi = jet[argmax_pt, ETA_I], jet[argmax_pt, PHI_I]
     if ptmax_eta < 0:
