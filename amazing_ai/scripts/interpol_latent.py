@@ -149,18 +149,24 @@ def generate_latent(events):
         print("Generating images", flush=True)
         imgs_t = torch.tensor(np.array([pixelate(normalize_jet(event), npix=args.npix, rotate=args.rotate, flip=args.flip) for event in events]))[:, None, :, :].float()
         latent_t = torch.zeros((len(events), 40), device="cuda", dtype=torch.float)
+        base_loss_t = torch.zeros(len(events), dtype=torch.float)
         print("Generating latent representations.", flush=True)
         BATCH_SIZE = 500
         imgs_loader = DataLoader(imgs_t, batch_size=BATCH_SIZE, shuffle=False)
         for i_batch, batch in enumerate(imgs_loader):
-            latent_t[i_batch*BATCH_SIZE:i_batch*BATCH_SIZE+len(batch)] = encoder(batch.to("cuda"))
-        return latent_t
-    
+            batch_cuda = batch.to("cuda")
+            latent_t[i_batch*BATCH_SIZE:i_batch*BATCH_SIZE+len(batch)] = batch_latent_t = encoder(batch_cuda)
+            batch_images2_t = decoder(batch_latent_t)
+            base_loss_t[i_batch*BATCH_SIZE:i_batch*BATCH_SIZE+len(batch)] = loss_function(batch_cuda, batch_images2_t).mean((1, 2, 3)).cpu()
+        return latent_t, base_loss_t
+
+
 
 print("Generating starts", flush=True)
-start_latent_t = generate_latent(start_events)
+start_latent_t, base_losses_t = generate_latent(start_events)
+file_out.create_dataset("base_losses", data=base_losses_t.numpy(), dtype=np.float32)
 print("Generating ends", flush=True)
-end_latent_t = generate_latent(end_events)
+end_latent_t, _ = generate_latent(end_events)
 
 del start_events
 del end_events
