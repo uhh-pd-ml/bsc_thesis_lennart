@@ -5,7 +5,6 @@ from amazing_ai.utils import rotate_jet, center_jet, flip_jet
 
 PT_I, ETA_I, PHI_I = 0, 1, 2
 
-__all__ = ("make_image",)
 
 def paint(target: np.ndarray, pos: tuple[int, int], brush: np.ndarray, norm: bool = False) -> np.ndarray:
     """
@@ -130,23 +129,3 @@ def pixelate(
             jet_image /= normfactor
 
     return jet_image
-
-def make_image(
-    jet: np.ndarray,
-    jet_conts: np.ndarray,
-    npix: int = 33,
-    img_width: float = 1.0,
-    rotate: bool = True,
-    center: bool = True,
-    flip: bool = False,
-    norm: bool = True,
-    blur: bool = False,
-    sigma: Optional[float] = 0.7,
-    blur_size: Optional[int] = 7
-) -> np.ndarray:
-    # jet_conts = convert_to_pt_eta_phi(jet, jet_conts)
-    if jet_conts.ndim == 1:
-        jet_conts = jet_conts.view().reshape(-1, 3)  # pT, eta, phi
-    return np.squeeze(
-        pixelate(jet_conts, npix=npix, img_width=img_width, rotate=rotate, center=center, flip=flip, norm=norm, blur=blur, sigma=sigma, blur_size=blur_size)
-    )
