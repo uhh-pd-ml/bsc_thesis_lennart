@@ -42,6 +42,8 @@ def parse_args() -> Namespace:
     parser.add_argument("--out", "-o", type=str, help="Output file (hdf5 format)")
     parser.add_argument("--save-images", default=False, action="store_true", help="Whether to save the images")
     parser.add_argument("--npix", type=int, default=54, help="Number of pixels")
+    parser.add_argument("--rotate", default=False, action="store_true", help="Rotate images")
+    parser.add_argument("--flip", default=False, action="store_true", help="Flip images")
     parser.add_argument("--interpol-radius", type=int, help="Interpolate inside a circle around the start event of radius given by the metric")
     parser.add_argument("--model", type=str, required=True)
 
@@ -132,9 +134,9 @@ file_out.attrs.update(
         "n_ends": n_ends,
         "steps": args.steps,
         "blur": False,
-        "rotate": True,
+        "rotate": args.rotate,
         "center": True,
-        "flip": False,
+        "flip": args.flip,
         "norm": True,
         "img_width": 1.2,
         "model": args.model,
@@ -146,7 +148,7 @@ file_out.attrs.update(
 def generate_latent(events):
     with torch.no_grad():
         print("Generating images", flush=True)
-        imgs_t = torch.tensor(np.array([pixelate(normalize_jet(event), npix=args.npix) for event in events]))[:, None, :, :].float()
+        imgs_t = torch.tensor(np.array([pixelate(normalize_jet(event), npix=args.npix, rotate=args.rotate, flip=args.flip) for event in events]))[:, None, :, :].float()
         latent_t = torch.zeros((len(events), 40), device="cuda", dtype=torch.float)
         print("Generating latent representations.", flush=True)
         BATCH_SIZE = 500
