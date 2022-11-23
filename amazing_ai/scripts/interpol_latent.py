@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, Namespace
-from itertools import product
 from torch.utils.data import DataLoader
 import json
 import numpy as np
