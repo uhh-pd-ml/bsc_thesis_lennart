@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 import h5py
-from . import make_image
+from . import pixelate
 import numpy as np
 import math
 from shutil import copyfile
@@ -240,8 +240,7 @@ for i in range(RANK, iters, SIZE):
     for i_image in range(this_batch_size):
         jet1 = normalize_jet(jet1_PFCands[i_image])
         jet1 = cutoff_jet(jet1, cutoff_log=args.cutoff)
-        j1_images[i_image] = make_image(
-            None,  # j1_4vec[i_image],
+        j1_images[i_image] = pixelate(
             jet1,
             npix=args.npix,
             img_width=args.width,
@@ -255,8 +254,7 @@ for i in range(RANK, iters, SIZE):
         )
         jet2 = normalize_jet(jet2_PFCands[i_image])
         jet2 = cutoff_jet(jet2, cutoff_log=args.cutoff)
-        j2_images[i_image] = make_image(
-            None,  # j2_4vec[i_image],
+        j2_images[i_image] = pixelate(
             jet2,
             npix=args.npix,
             img_width=args.width,
