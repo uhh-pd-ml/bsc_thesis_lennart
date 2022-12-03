@@ -44,7 +44,7 @@ def make_exchange_particles(e0: np.ndarray, e1: np.ndarray, R: float = 1.2):
     
     return distance, exchange_start, exchange_end
 
-def interpol_emd(e0: np.ndarray, e1: np.ndarray, n_points: int, R: float = 1.2, emd_radius: Optional[float] = None) -> tuple[float, Callable[[int], np.array]]:
+def interpol_emd(e0: np.ndarray, e1: np.ndarray, n_points: int, R: float = 1, emd_radius: Optional[float] = None) -> tuple[float, Callable[[int], np.array]]:
     """
     This implementation should work the same as in emd_energyflow.py
     but perform faster
