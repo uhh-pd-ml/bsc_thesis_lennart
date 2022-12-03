@@ -9,6 +9,7 @@ from amazing_ai.utils import normalize_jet
 from amazing_ai.auto_encoder.model import load_model
 from torch import nn
 import torch
+import os
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
@@ -78,7 +79,8 @@ file_out_name = file_out_name.format(
     n_ends="-".join(map(str, n_ends)),
     model=args.model,
     interpol_radius=args.interpol_radius,
-    interpol_method="latent"
+    interpol_method="latent",
+    jobid=os.environ.get("SLURM_JOB_ID")
 )
 
 # Open files

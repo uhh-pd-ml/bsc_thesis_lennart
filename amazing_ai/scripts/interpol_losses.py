@@ -12,6 +12,7 @@ from amazing_ai.auto_encoder.model import load_model
 from torch import nn
 from torch.nn.parallel import DataParallel
 import torch
+import os
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
@@ -101,7 +102,8 @@ file_out_name = file_out_name.format(
     n_ends="-".join(map(str, n_ends)),
     model=args.model,
     interpol_radius=args.interpol_radius,
-    interpol_method=args.interpol_method
+    interpol_method=args.interpol_method,
+    jobid=os.environ.get("SLURM_JOB_ID")
 )
 
 # Open files
