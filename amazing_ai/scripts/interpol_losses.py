@@ -204,7 +204,7 @@ for block_index, (i, j) in enumerate(product(range(0, len(start_events), BLOCK_S
         event_start, event_end = normalize_jet(start_events[p_i]), normalize_jet(end_events[p_j])
 
         if args.interpol_method == "emd":
-            distance, interpol = interpol_emd(event_start, event_end, args.steps, R=1.2, emd_radius=args.interpol_radius)
+            distance, interpol = interpol_emd(event_start, event_end, args.steps, R=1, emd_radius=args.interpol_radius)
         elif args.interpol_method == "linear":
             distance, interpol = interpol_linear(event_start, event_end, args.steps, radius=args.interpol_radius)
         pair_distances[pair_index] = distance
