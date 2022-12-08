@@ -115,7 +115,7 @@ files_start_indices = [
     np.sort((
         np.array([args.event_start])
         if args.event_start is not None
-        else np.random.choice(range(len(file_start["jet1_PFCands"])), size=f_n_starts, replace=False)
+        else np.random.choice(range(int(.9*len(file_start["jet1_PFCands"])), len(file_start["jet1_PFCands"])), size=f_n_starts, replace=False)
     ))
     for file_start, f_n_starts in zip(files_start, n_starts)
 ]
@@ -123,7 +123,7 @@ files_end_indices = [
     np.sort((
         np.array([args.event_end])
         if args.event_end is not None
-        else np.random.choice(range(len(file_end["jet1_PFCands"])), size=f_n_ends, replace=False)
+        else np.random.choice(range(int(.9*len(file_end["jet1_PFCands"])), len(file_end["jet1_PFCands"])), size=f_n_ends, replace=False)
     ))
     for file_end, f_n_ends in zip(files_end, n_ends)
 ] if not args.a_to_a else files_start_indices
