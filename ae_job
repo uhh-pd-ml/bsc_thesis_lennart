@@ -28,13 +28,16 @@ cd ~/Projects/amazing_ai
 
 # run
 # time python -m auto_encoder -o "./out/$SLURM_JOBID" -e 300
-# --data @events_b_sr_images_42_center \
-# --data @events_b_sr_images_54_center \
+     # --data @events_b_sr_images_54_cutoff=-10.0_sigma=0.6_bs=15_center.h5 \
 time python -m amazing_ai.auto_encoder \
-     -o "./out/${SLURM_JOBID}_npix={npix}_ts={train_size}_data={data}" \
-     -e 200 \
-     --data @events_b_sr_images_54_cutoff=1.0_center \
-     --npix 54 \
+     -o "./models/42_center/${SLURM_JOBID}_model={model}_npix={npix}_ts={train_size}_data={data}_noise={noise}_ls={latent_space_size}" \
+     -e 300 \
+     --npix 42 \
      --batch_size 512 \
-     --learning_rate 1e-3
+     --data @events_b_sr_images_42_center_hist.h5 \
+     --learning_rate 1e-3 \
+     --noise 8e-4 \
+     --model 1 \
+     --latent_space_size 40
+     # --noise 7e-3
 # time python -m amazing_ai.auto_encoder -o "./out/$SLURM_JOBID" -e 300 --data @kristian_events_b_sr_images_33px_rotated+flipped
