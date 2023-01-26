@@ -1,6 +1,6 @@
 #!/bin/sh
-#SBATCH --partition=cms-uhh ## or allgpu / cms / cms-uhh / maxgpu
-#SBATCH --time=24:00:00
+#SBATCH --partition=maxgpu ## or allgpu / cms / cms-uhh / maxgpu
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --job-name interpol_latent           # give job unique name
 #SBATCH --output ./interpol_latent_log/%j-std.out      # terminal output
@@ -40,12 +40,29 @@ cd ~/Projects/amazing_ai
 # --a-to-a \
 
 time python -m amazing_ai.scripts.interpol_latent \
-        --file-start @events_b_sr.h5 @events_s_sr.h5 \
-        --n-starts 20000 20000 \
-        --file-end @events_b_sr.h5 \
-        --n-ends 600 \
-        -o @interpol_any-b_{n_starts}_{n_ends}_ir={interpol_radius}_im={interpol_method}{flags}.h5 \
-        --steps 100 \
-        --model out/12139736*/ \
-        --interpol-radius 20 \
+        --file-start @events_b_sr.h5 @events_s_sr.h5 --n-starts 1000 1000 \
+        --file-end @events_b_sr.h5 --n-ends 1000 \
+        --steps 100 --npix 42 \
+        --interpol-radius 2 \
+        -o @interpol_latent/{interpol_radius}/interpol_{jobid}_any-b_{n_starts}_{n_ends}_im={interpol_method}_ir={interpol_radius}{flags}.h5 \
+        --model models/13554747_model=1_npix=42_ts=0.6_data=@events_b_sr_images_42_center_hist.h5_noise=0.0008_ls=40
+        # --rotate --flip
+        # --model models/13170844_model=1_npix=42_ts=0.6_data=@events_b_sr_images_42_center_rotate_flip_hist.h5_noise=0.0008_ls=40
+        # --interpol-radius 7 \
+        # --model out/12139736*/
 #        --interpol-radius 200 \
+# _ir={interpol_radius}
+
+# time python -m amazing_ai.scripts.interpol_latent \
+#         --file-start @events_b_sr.h5 @events_s_sr.h5 \
+#         --n-starts 2000 2000 \
+#         --file-end @events_b_sr.h5 \
+#         --n-ends 600 \
+#         -o @interpol_any-b_{n_starts}_{n_ends}_im={interpol_method}_ir={interpol_radius}{flags}.h5 \
+#         --steps 100 \
+#         --rotate --flip --npix 42 \
+#         --model models/13170844_model=1_npix=42_ts=0.6_data=@events_b_sr_images_42_center_rotate_flip_hist.h5_noise=0.0008_ls=40
+#         # --interpol-radius 7 \
+#         # --model out/12139736*/
+# #        --interpol-radius 200 \
+# # _ir={interpol_radius}

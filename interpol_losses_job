@@ -1,6 +1,6 @@
 #!/bin/sh
-#SBATCH --partition=cms-uhh ## or allgpu / cms / cms-uhh / maxgpu
-#SBATCH --time=24:00:00
+#SBATCH --partition=maxgpu ## or allgpu / cms / cms-uhh / maxgpu
+#SBATCH --time=03:00:00
 #SBATCH --nodes=2
 #SBATCH --job-name interpol_losses           # give job unique name
 #SBATCH --output ./interpol_losses_log/%j-std.out      # terminal output
@@ -38,21 +38,37 @@ cd ~/Projects/amazing_ai
 # END=b
 # --file-end @events_${END}_sr.h5 \
 # --a-to-a \
+        # --interpol-radius 50 \
 
 MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
     python -m amazing_ai.scripts.interpol_losses \
         --file-start @events_b_sr.h5 @events_s_sr.h5 \
-        --n-starts 10000 10000 \
+        --n-starts 1000 1000 \
         --file-end @events_b_sr.h5 \
-        --n-ends 600 \
-        --interpol-method linear \
-        --interpol-radius 500 \
-        -o @interpol_losses_any-b_{n_starts}_{n_ends}_ir={interpol_radius}_im={interpol_method}{flags}.h5 \
+        --n-ends 1000 \
+        --interpol-method linear --interpol-radius 5 \
+        -o @interpol_{interpol_method}/{interpol_radius}/interpol_{jobid}_{n_starts}_{n_ends}_ir={interpol_radius}_im={interpol_method}{flags}.h5 \
         --steps 100 \
+        --npix 42 \
         --block-size 50 \
         --model-batch-size 10000 \
-        --model out/12139736*/ \
+        --model models/13554747_model=1_npix=42_ts=0.6_data=@events_b_sr_images_42_center_hist.h5_noise=0.0008_ls=40 \
         --mpi
+
+# MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
+#     python -m amazing_ai.scripts.interpol_losses \
+#         --file-start @events_b_sr.h5 @events_s_sr.h5 \
+#         --n-starts 10000 10000 \
+#         --file-end @events_b_sr.h5 \
+#         --n-ends 1000 \
+#         --interpol-method emd \
+#         -o @interpol_losses_any-b_{n_starts}_{n_ends}_ir={interpol_radius}_im={interpol_method}{flags}.h5 \
+#         --steps 100 \
+#         --npix 42 \
+#         --block-size 50 \
+#         --model-batch-size 10000 \
+#         --model models/13554747_model=1_npix=42_ts=0.6_data=@events_b_sr_images_42_center_hist.h5_noise=0.0008_ls=40 \
+#         --mpi
 
 
 # MPI4PY_RC_THREADS=0 time mpirun --use-hwthread-cpus \
